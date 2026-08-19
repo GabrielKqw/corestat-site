@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoreStat — Monitor de hardware nativo para Windows</title>
+<link rel="icon" type="image/png" href="corestat-512.png">
+<meta name="description" content="CoreStat observa, mede e explica o que está acontecendo com o seu PC — temperaturas, utilização, sensores e saúde — sem prometer milagres e sem inventar problemas.">
+<style>
+  :root {
+    --bg: #16171A;
+    --surface: #212226;
+    --surface-alt: #1B1C1F;
+    --border: #34363B;
+    --text: #F3F4F5;
+    --text-2: #9A9EA6;
+    --accent: #5B9BFF;
+    --ok: #3FCB75;
+    --warn: #F0AC3E;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    line-height: 1.6;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  header { border-bottom: 1px solid var(--border); background: var(--surface-alt); position: sticky; top: 0; z-index: 10; }
+  .nav { display: flex; align-items: center; gap: 24px; height: 60px; }
+  .logo { font-weight: 700; font-size: 17px; display: flex; align-items: center; gap: 10px; }
+  .logo img { width: 26px; height: 26px; border-radius: 6px; }
+  .nav .links { margin-left: auto; display: flex; gap: 20px; font-size: 14px; align-items: center; }
+  .nav .links a { color: var(--text-2); }
+  .nav .links a:hover { color: var(--text); }
+  .nav .links a.cta { color: #0B1526; background: var(--accent); padding: 7px 14px; border-radius: 7px; font-weight: 600; }
+
+  .hero { padding: 72px 0 52px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  .hero h1 { font-size: 40px; line-height: 1.15; font-weight: 700; }
+  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero p.sub { color: var(--text-2); margin: 18px 0 28px; font-size: 17px; }
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    display: inline-block; padding: 12px 22px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    border: 1px solid var(--border); color: var(--text); background: var(--surface); transition: .15s;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #0B1526; }
+  .btn.primary:hover { filter: brightness(1.1); }
+  .meta { font-size: 12px; color: var(--text-2); }
+
+  .mock { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+  .mock .bar { display: flex; gap: 6px; margin-bottom: 14px; }
+  .mock .bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--border); display: block; }
+  .mock .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+  .mcard { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .mcard .t { font-size: 11px; color: var(--text-2); display: flex; justify-content: space-between; }
+  .mcard .t b { color: var(--ok); font-weight: 600; }
+  .ring { width: 54px; height: 54px; border-radius: 50%; margin: 10px auto 4px; display: grid; place-items: center; }
+  .r1 { background: conic-gradient(var(--ok) 0 32%, #464951 32% 100%); }
+  .r2 { background: conic-gradient(var(--ok) 0 56%, #464951 56% 100%); }
+  .r3 { background: conic-gradient(var(--warn) 0 87%, #464951 87% 100%); }
+  .ring span { width: 40px; height: 40px; background: var(--surface-alt); border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  .mock .chart { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 8px; padding: 10px 10px 4px; }
+  .mock .chart .t { font-size: 11px; color: var(--text-2); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .mock .chart .t b { color: var(--text); }
+  .mock svg { width: 100%; height: 56px; display: block; }
+
+  section { padding: 56px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: 26px; margin-bottom: 8px; }
+  .lead { color: var(--text-2); margin-bottom: 32px; max-width: 720px; }
+
+  /* download */
+  .dl { display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; align-items: stretch; }
+  .dl-main {
+    background: linear-gradient(160deg, #23262D, #1A1B1F);
+    border: 1px solid var(--border); border-radius: 12px; padding: 26px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .dl-main .row { display: flex; align-items: center; gap: 16px; }
+  .dl-main img { width: 56px; height: 56px; border-radius: 12px; }
+  .dl-main h3 { font-size: 19px; }
+  .dl-main .ver { font-size: 13px; color: var(--text-2); }
+  .dl-main .facts { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); margin: 14px 0 18px; }
+  .dl-main .facts span b { color: var(--text); font-weight: 600; }
+  .hash { font-family: Consolas, "Cascadia Mono", monospace; font-size: 11px; color: var(--text-2); word-break: break-all; margin-top: 14px; }
+  .hash b { color: var(--text-2); font-weight: 700; }
+  .dl-side { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .dl-side h4 { font-size: 14px; margin-bottom: 12px; }
+  .dl-side ol { list-style: none; counter-reset: s; }
+  .dl-side li { counter-increment: s; position: relative; padding: 7px 0 7px 30px; font-size: 13px; color: var(--text-2); }
+  .dl-side li::before {
+    content: counter(s); position: absolute; left: 0; top: 8px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--surface-alt); border: 1px solid var(--border); color: var(--accent);
+    font-size: 11px; font-weight: 700; display: grid; place-items: center;
+  }
+  .note { margin-top: 22px; background: var(--surface-alt); border: 1px solid var(--border); border-left: 3px solid var(--warn); border-radius: 8px; padding: 14px 16px; font-size: 13px; color: var(--text-2); }
+  .note b { color: var(--text); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .feat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .feat .ic { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; margin-bottom: 12px; font-size: 16px; }
+  .feat h3 { font-size: 15px; margin-bottom: 6px; }
+  .feat p { font-size: 13px; color: var(--text-2); }
+
+  pre {
+    background: var(--surface-alt); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; font-size: 13px; overflow-x: auto; color: var(--text);
+    font-family: Consolas, "Cascadia Mono", monospace; margin-top: 10px;
+  }
+  pre .c { color: var(--text-2); }
+
+  .road { list-style: none; max-width: 720px; }
+  .road li { padding: 10px 0 10px 34px; position: relative; border-left: 2px solid var(--border); margin-left: 8px; font-size: 14px; color: var(--text-2); }
+  .road li b { color: var(--text); }
+  .road li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--border); position: absolute; left: -7px; top: 16px; }
+  .road li.done::before { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .road li .tag { font-size: 11px; font-weight: 700; color: var(--ok); margin-right: 6px; }
+  .road li .tag.next { color: var(--accent); }
+
+  footer { border-top: 1px solid var(--border); padding: 28px 0; font-size: 13px; color: var(--text-2); }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  @media (max-width: 880px) {
+    .hero, .dl, .grid { grid-template-columns: 1fr; }
+    .hero { padding-top: 48px; }
+    .hero h1 { font-size: 32px; }
+    .nav .links a:not(.cta) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <span class="logo"><img src="corestat-512.png" alt="">CoreStat</span>
+    <nav class="links">
+      <a href="#recursos">Recursos</a>
+      <a href="#requisitos">Requisitos</a>
+      <a href="#roadmap">Roadmap</a>
+      <a class="cta" href="#download">Baixar</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <h1>O que está acontecendo com o seu PC, <em>explicado</em>.</h1>
+      <p class="sub">
+        Monitor de hardware nativo para Windows 10/11: temperaturas, utilização, sensores
+        e um diagnóstico de saúde com a evidência de cada verificação — dados reais, sem
+        prometer "otimizar" nada e sem inventar problemas.
+      </p>
+      <div class="btns">
+        <a class="btn primary" href="#download">Baixar para Windows</a>
+        <a class="btn" href="#recursos">Ver recursos</a>
+      </div>
+      <p class="meta" style="margin-top:14px;">Versão 0.3.0 · Windows 10/11 x64 · instalador de 60 MB</p>
+    </div>
+
+    <div class="mock" aria-hidden="true">
+      <div class="bar"><i></i><i></i><i></i></div>
+      <div class="cards">
+        <div class="mcard"><div class="t">CPU <b>Normal</b></div><div class="ring r1"><span>32%</span></div></div>
+        <div class="mcard"><div class="t">Memória <b>Normal</b></div><div class="ring r2"><span>56%</span></div></div>
+        <div class="mcard"><div class="t">GPU <b style="color:var(--warn)">Atenção</b></div><div class="ring r3"><span>87%</span></div></div>
+      </div>
+      <div class="chart">
+        <div class="t"><span>Uso da CPU (%)</span><b>32%</b></div>
+        <svg viewBox="0 0 300 56" preserveAspectRatio="none">
+          <polyline fill="rgba(91,155,255,.14)" stroke="none"
+            points="0,56 0,40 20,42 40,30 60,36 80,22 100,30 120,18 140,28 160,14 180,24 200,20 220,10 240,22 260,16 280,24 300,18 300,56"/>
+          <polyline fill="none" stroke="#5B9BFF" stroke-width="2"
+            points="0,40 20,42 40,30 60,36 80,22 100,30 120,18 140,28 160,14 180,24 200,20 220,10 240,22 260,16 280,24 300,18"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <section id="download">
+    <h2>Download</h2>
+    <p class="lead">Instalador único, com o driver de sensores incluso. Não precisa ter o .NET instalado.</p>
+    <div class="dl">
+      <div class="dl-main">
+        <div class="row">
+          <img src="corestat-512.png" alt="">
+          <div>
+            <h3>CoreStatSetup-0.3.0.exe</h3>
+            <div class="ver">Instalador para Windows 10/11 (x64)</div>
+          </div>
+        </div>
+        <div class="facts">
+          <span>Tamanho <b>60 MB</b></span>
+          <span>Versão <b>0.3.0</b></span>
+          <span>Runtime <b>incluso</b></span>
+          <span>Driver <b>PawnIO opcional</b></span>
+        </div>
+        <a class="btn primary" style="align-self:flex-start;"
+           href="https://github.com/GabrielKqw/corestat-site/releases/download/v0.3.0/CoreStatSetup-0.3.0.exe">Baixar instalador</a>
+        <div class="hash"><b>SHA-256</b><br>c569e337a0b2301a968fbfe542f59a897421976a05b494f5e8a60fddca8f65db</div>
+      </div>
+
+      <div class="dl-side">
+        <h4>Como instalar</h4>
+        <ol>
+          <li>Baixe e execute o instalador (o Windows vai pedir permissão de administrador).</li>
+          <li>Mantenha marcada a opção <b>instalar o driver PawnIO</b> — é ele que libera temperatura, clock e potência da CPU.</li>
+          <li>Escolha se quer atalho na área de trabalho e conclua.</li>
+          <li>Abra o CoreStat: ele já inicia elevado e começa a ler os sensores.</li>
+        </ol>
+        <div class="note">
+          O SmartScreen pode avisar que o publicador é desconhecido — o instalador não tem
+          assinatura de código paga. Clique em <b>Mais informações → Executar assim mesmo</b>,
+          ou confira o SHA-256 ao lado antes de instalar.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="recursos">
+    <h2>Recursos</h2>
+    <p class="lead">Entre o extremamente técnico (CPU-Z, HWiNFO) e os dashboards genéricos:
+    organizado, legível, e sempre separando o que foi <b>lido</b> do hardware do que é
+    <b>interpretação</b> do CoreStat.</p>
+    <div class="grid">
+      <div class="feat"><div class="ic">📊</div><h3>Visão Geral</h3>
+        <p>Dashboard com CPU, memória, GPU e armazenamento em tempo real — gauges, status Normal/Atenção/Crítico e score de saúde do sistema.</p></div>
+      <div class="feat"><div class="ic">📈</div><h3>Desempenho</h3>
+        <p>10 gráficos ao vivo: utilização e temperatura de CPU/GPU, RAM, VRAM, leitura/escrita de disco e tráfego de rede, com janelas de 60s a 15min.</p></div>
+      <div class="feat"><div class="ic">❤️</div><h3>Saúde com evidências</h3>
+        <p>Cada verificação mostra a leitura e o limiar que a julgou ("45 °C agora · atenção a partir de 80 °C") e o que fazer quando algo foge do normal.</p></div>
+      <div class="feat"><div class="ic">🔍</div><h3>Hardware estilo CPU-Z</h3>
+        <p>Inventário detalhado: stepping, ProcessorId, device ID da GPU, slot/voltagem dos módulos de RAM, SMART dos discos — tudo com botão copiar.</p></div>
+      <div class="feat"><div class="ic">🌡️</div><h3>Sensores</h3>
+        <p>Árvore completa de sensores do LibreHardwareMonitor. Quando uma leitura não existe, mostra "Não disponível" — nunca um valor inventado.</p></div>
+      <div class="feat"><div class="ic">🌗</div><h3>App nativo bem-feito</h3>
+        <p>Tema claro/escuro, bandeja do sistema, DPI per-monitor e janela customizada — sem runtime de navegador embutido.</p></div>
+    </div>
+  </section>
+
+  <section id="requisitos">
+    <h2>Requisitos</h2>
+    <p class="lead">CoreStat lê sensores de verdade — e isso tem pré-requisitos de verdade.</p>
+    <div class="grid" style="grid-template-columns:1fr 1fr;">
+      <div class="feat">
+        <h3>Sistema</h3>
+        <p>Windows 10 ou 11 (x64) e execução como administrador — o app já solicita elevação sozinho. O runtime .NET vem dentro do instalador.</p>
+      </div>
+      <div class="feat">
+        <h3>Driver de sensores</h3>
+        <p>O <a href="https://pawnio.eu">PawnIO</a> é instalado junto (opcional). Sem ele não há temperatura, clock nem potência da CPU — o WinRing0 antigo é bloqueado pela blocklist do Windows. A página Saúde avisa se o driver faltar.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="roadmap">
+    <h2>Roadmap</h2>
+    <p class="lead">O núcleo primeiro; recursos chamativos depois que ele estiver estável.</p>
+    <ul class="road">
+      <li class="done"><span class="tag">FEITO</span><b>Foundation</b> — solução, DI, logging, configurações, abstração de hardware</li>
+      <li class="done"><span class="tag">FEITO</span><b>Core Monitoring</b> — CPU/GPU/RAM/armazenamento, sensores, Visão Geral</li>
+      <li class="done"><span class="tag">FEITO</span><b>Performance</b> — gráficos em tempo real</li>
+      <li class="done"><span class="tag">FEITO</span><b>Saúde v1</b> — diagnóstico instantâneo com evidências</li>
+      <li><span class="tag next">PRÓXIMO</span><b>Saúde v2</b> — análise com histórico: problema persistente ≠ pico momentâneo</li>
+      <li><b>History</b> — SQLite, retenção e agregação</li>
+      <li><b>PC Report</b> — relatório exportável com modo de privacidade</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>CoreStat — monitor de hardware nativo para Windows.</span>
+    <span>Versão 0.3.0</span>
+  </div>
+</footer>
+
+</body>
+</html>
